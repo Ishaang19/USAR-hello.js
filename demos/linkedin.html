@@ -1,32 +1,219 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 
-<link rel="stylesheet" href="/adorn/adorn.css"/>
-<script src="/adorn/adorn.js" async></script>
+ 
 
-<script src="client_ids.js"></script>
-<script src="../src/hello.polyfill.js"></script>
-<script src="../src/hello.js"></script>
-<script src="../src/modules/linkedin.js"></script>
+<link rel="stylesheet" href="/adorn/adorn.css"/> 
 
-<title>hello( linkedin )</title>
-<h1>hello( linkedin )</h1>
+<script src="/adorn/adorn.js" async></script> 
 
-<button id='login' onclick="hello.login('linkedin');">LinkedIn</button>
-<div id="result"></div>
-<script class="pre">
-hello.on('auth.login', function(r){
-	// Get Profile
-	hello(r.network).api('me').then(function(p){
-		document.getElementById('login').innerHTML = "<img src='"+ p.thumbnail + "' width=24/>Connected to "+ r.network+" as " + p.name;
-	});
-});
+ 
 
+<script src="client_ids.js"></script> 
 
-hello.init({
-	'linkedin' : LINKEDIN_CLIENT_ID,
-},{
-	scope : ['friends','email'],
-	redirect_uri:'../redirect.html',
-	oauth_proxy: OAUTH_PROXY_URL
-});
-</script>
+<script src="../src/hello.polyfill.js"></script> 
+
+<script src="../src/hello.js"></script> 
+
+<script src="../src/modules/linkedin.js"></script> 
+
+ 
+
+<title>hello( linkedin )</title> 
+
+<h1>hello( linkedin )</h1> 
+
+ 
+
+<div class="notice" style="background: #e7f3ff; padding: 15px; margin: 15px 0; border-left: 4px solid #2196F3;"> 
+
+<strong>ℹ️ LinkedIn API v2 Notice:</strong> 
+
+<p>This demo uses LinkedIn API v2 which has these changes:</p> 
+
+<ul> 
+
+<li>OAuth endpoints updated from /uas/ to /oauth/v2/</li> 
+
+<li>Updated scopes: r_liteprofile (basic info) and r_emailaddress (email)</li> 
+
+<li>Profile picture requires profile picture decorations in API call</li> 
+
+<li>Network updates (feed) access is very limited in v2</li> 
+
+</ul> 
+
+<p>Learn more: <a href="https://docs.microsoft.com/en-us/linkedin/shared/authentication/authentication" target="_blank">LinkedIn Authentication</a></p> 
+
+</div> 
+
+ 
+
+<button id='login' onclick="loginLinkedIn();">Connect with LinkedIn</button> 
+
+<div id="profile"></div> 
+
+<div id="result"></div> 
+
+ 
+
+<script class="pre"> 
+
+function loginLinkedIn() { 
+
+hello('linkedin').login({ 
+
+scope: 'r_liteprofile,r_emailaddress' 
+
+}).then(function() { 
+
+log('Login successful!'); 
+
+getProfile(); 
+
+}, function(e) { 
+
+log('Login failed: ' + (e.error ? e.error.message : e)); 
+
+}); 
+
+} 
+
+ 
+
+function getProfile() { 
+
+// Get basic profile 
+
+hello('linkedin').api('me').then(function(p) { 
+
+var profileDiv = document.getElementById('profile'); 
+
+profileDiv.innerHTML = '<h3>Profile Information</h3>' + 
+
+'<p><strong>Name:</strong> ' + (p.name || 'N/A') + '</p>' + 
+
+'<p><strong>ID:</strong> ' + (p.id || 'N/A') + '</p>'; 
+
+ 
+
+if (p.thumbnail) { 
+
+profileDiv.innerHTML += '<p><img src="' + p.thumbnail + '" width="100"/></p>'; 
+
+} 
+
+ 
+
+// Update button 
+
+document.getElementById('login').innerHTML = 'Connected as ' + (p.name || 'User'); 
+
+ 
+
+// Try to get email (requires r_emailaddress scope) 
+
+getEmail(); 
+
+}, function(e) { 
+
+log('Failed to get profile: ' + (e.error ? e.error.message : e)); 
+
+}); 
+
+} 
+
+ 
+
+function getEmail() { 
+
+hello('linkedin').api('me/email').then(function(e) { 
+
+if (e && e.email) { 
+
+var profileDiv = document.getElementById('profile'); 
+
+profileDiv.innerHTML += '<p><strong>Email:</strong> ' + e.email + '</p>'; 
+
+} 
+
+}, function(e) { 
+
+log('Failed to get email: ' + (e.error ? e.error.message : e)); 
+
+}); 
+
+} 
+
+ 
+
+function log(message) { 
+
+console.log(message); 
+
+var resultDiv = document.getElementById('result'); 
+
+var p = document.createElement('p'); 
+
+p.textContent = message; 
+
+p.style.color = message.includes('failed') || message.includes('Failed') ? 'red' : 'green'; 
+
+resultDiv.appendChild(p); 
+
+} 
+
+ 
+
+// Listen for auth events 
+
+hello.on('auth.login', function(r) { 
+
+log('Authentication event: logged in to ' + r.network); 
+
+}); 
+
+ 
+
+hello.on('auth.logout', function(r) { 
+
+log('Logged out from ' + r.network); 
+
+document.getElementById('profile').innerHTML = ''; 
+
+document.getElementById('login').innerHTML = 'Connect with LinkedIn'; 
+
+}); 
+
+ 
+
+</script> 
+
+ 
+
+<p>Initialize with your LinkedIn Client ID:</p> 
+
+ 
+
+<script class="pre"> 
+
+hello.init({ 
+
+'linkedin' : LINKEDIN_CLIENT_ID 
+
+},{ 
+
+scope: 'r_liteprofile,r_emailaddress', 
+
+redirect_uri: '../redirect.html', 
+
+oauth_proxy: OAUTH_PROXY_URL 
+
+}); 
+
+</script> 
+
+ 
+
+<h2>Logout</h2> 
+
+<button onclick="hello('linkedin').logout();">Logout from LinkedIn</button> 
