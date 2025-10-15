@@ -1495,6 +1495,17 @@ authCallback(p, window, parent);
 			}
 
 			// If this page is still open
+			// Only redirect if the current location is different from page_uri (excluding hash) 
+			if (p.page_uri && isValidUrl(p.page_uri)) { 
+				var currentUrl = location.href.split('#')[0]; 
+				var targetUrl = p.page_uri.split('#')[0]; 
+				// Only assign if we're not already at the target location 
+
+				if (currentUrl !== targetUrl) { 
+
+					location.assign(p.page_uri); 
+
+					} 
 			if (p.page_uri && isValidUrl(p.page_uri)) {
 				location.assign(p.page_uri);
 			}
