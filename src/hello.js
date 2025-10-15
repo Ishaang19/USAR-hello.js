@@ -1337,6 +1337,103 @@ hello.utils.extend(hello.utils, {
 		p = _this.merge(_this.param(location.search || ''), _this.param(location.hash || ''));
 
 		// If p.state
+		// If p.state 
+
+if (p && 'state' in p) { 
+
+ 
+
+// Remove any addition information 
+
+// E.g. p.state = 'facebook.page'; 
+
+try { 
+
+var a = JSON.parse(p.state); 
+
+_this.extend(p, a); 
+
+} 
+
+catch (e) { 
+
+var stateDecoded = decodeURIComponent(p.state); 
+
+try { 
+
+var b = JSON.parse(stateDecoded); 
+
+_this.extend(p, b); 
+
+} 
+
+catch (e) { 
+
+console.error('Could not decode state parameter'); 
+
+} 
+
+} 
+
+ 
+
+// OAuth2 Access_token? 
+
+// OAuth1 oauth_token? 
+
+if ((('access_token' in p && p.access_token) || ('oauth_token' in p && p.oauth_token)) && p.network) { 
+
+ 
+
+// Normalize OAuth1 tokens to OAuth2 format 
+
+if (p.oauth_token) { 
+
+p.access_token = p.oauth_token; 
+
+// Store oauth_token_secret for signing requests 
+
+if (p.oauth_token_secret) { 
+
+p.access_token += ':' + p.oauth_token_secret; 
+
+} 
+
+} 
+
+ 
+
+if (!p.expires_in || parseInt(p.expires_in, 10) === 0) { 
+
+// If p.expires_in is unset, set to 0 
+
+p.expires_in = 0; 
+
+} 
+
+ 
+
+p.expires_in = parseInt(p.expires_in, 10); 
+
+p.expires = ((new Date()).getTime() / 1e3) + (p.expires_in || (60 * 60 * 24 * 365)); 
+
+ 
+
+// Store OAuth version for later use 
+
+if (p.oauth) { 
+
+p.oauth_version = p.oauth.version; 
+
+} 
+
+ 
+
+// Lets use the "state" to assign it to one of our networks 
+
+authCallback(p, window, parent); 
+
+} 
 		if (p && 'state' in p) {
 
 			// Remove any addition information

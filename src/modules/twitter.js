@@ -135,8 +135,8 @@
 			},
 			xhr: function(p) {
 
-				// Rely on the proxy for non-GET requests.
-				return (p.method !== 'get');
+				// Twitter OAuth1 requires ALL requests to be proxied for signing 
+				return true; 
 			}
 		}
 	});
