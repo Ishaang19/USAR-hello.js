@@ -1,191 +1,323 @@
-(function(hello) {
+(function(hello) { 
 
-	hello.init({
+ 
 
-		instagram: {
+hello.init({ 
 
-			name: 'Instagram',
+ 
 
-			oauth: {
-				// See: http://instagram.com/developer/authentication/
-				version: 2,
-				auth: 'https://instagram.com/oauth/authorize/',
-				grant: 'https://api.instagram.com/oauth/access_token'
-			},
+instagram: { 
 
-			// Refresh the access_token once expired
-			refresh: true,
+ 
 
-			scope: {
-				basic: 'basic',
-				photos: '',
-				friends: 'relationships',
-				publish: 'likes comments',
-				email: '',
-				share: '',
-				publish_files: '',
-				files: '',
-				videos: '',
-				offline_access: ''
-			},
+name: 'Instagram', 
 
-			scope_delim: ' ',
+ 
 
-			base: 'https://api.instagram.com/v1/',
+oauth: { 
 
-			get: {
-				me: 'users/self',
-				'me/feed': 'users/self/feed?count=@{limit|100}',
-				'me/photos': 'users/self/media/recent?min_id=0&count=@{limit|100}',
-				'me/friends': 'users/self/follows?count=@{limit|100}',
-				'me/following': 'users/self/follows?count=@{limit|100}',
-				'me/followers': 'users/self/followed-by?count=@{limit|100}',
-				'friend/photos': 'users/@{id}/media/recent?min_id=0&count=@{limit|100}'
-			},
+// Instagram Basic Display API 
 
-			post: {
-				'me/like': function(p, callback) {
-					var id = p.data.id;
-					p.data = {};
-					callback('media/' + id + '/likes');
-				}
-			},
+// See: https://developers.facebook.com/docs/instagram-basic-display-api 
 
-			del: {
-				'me/like': 'media/@{id}/likes'
-			},
+version: 2, 
 
-			wrap: {
-				me: function(o) {
+auth: 'https://www.instagram.com/oauth/authorize/', 
 
-					formatError(o);
+grant: 'https://api.instagram.com/oauth/access_token' 
 
-					if ('data' in o) {
-						o.id = o.data.id;
-						o.thumbnail = o.data.profile_picture;
-						o.name = o.data.full_name || o.data.username;
-					}
+}, 
 
-					return o;
-				},
+ 
 
-				'me/friends': formatFriends,
-				'me/following': formatFriends,
-				'me/followers': formatFriends,
-				'me/photos': function(o) {
+// Refresh the access_token once expired 
 
-					formatError(o);
-					paging(o);
+refresh: true, 
 
-					if ('data' in o) {
-						o.data = o.data.filter(function(d) {
-							return d.type === 'image';
-						});
+ 
 
-						o.data.forEach(function(d) {
-							d.name = d.caption ? d.caption.text : null;
-							d.thumbnail = d.images.thumbnail.url;
-							d.picture = d.images.standard_resolution.url;
-							d.pictures = Object.keys(d.images)
-								.map(function(key) {
-									var image = d.images[key];
-									return formatImage(image);
-								})
-								.sort(function(a, b) {
-									return a.width - b.width;
-								});
-						});
-					}
+scope: { 
 
-					return o;
-				},
+// Basic Display API scopes 
 
-				'default': function(o) {
-					o = formatError(o);
-					paging(o);
-					return o;
-				}
-			},
+basic: 'user_profile', 
 
-			// Instagram does not return any CORS Headers
-			// So besides JSONP we're stuck with proxy
-			xhr: function(p, qs) {
+photos: 'user_media', 
 
-				var method = p.method;
-				var proxy = method !== 'get';
+// Deprecated/unsupported scopes 
 
-				if (proxy) {
+friends: '', 
 
-					if ((method === 'post' || method === 'put') && p.query.access_token) {
-						p.data.access_token = p.query.access_token;
-						delete p.query.access_token;
-					}
+publish: '', 
 
-					// No access control headers
-					// Use the proxy instead
-					p.proxy = proxy;
-				}
+email: '', 
 
-				return proxy;
-			},
+share: '', 
 
-			// No form
-			form: false
-		}
-	});
+publish_files: '', 
 
-	function formatImage(image) {
-		return {
-			source: image.url,
-			width: image.width,
-			height: image.height
-		};
-	}
+files: '', 
 
-	function formatError(o) {
-		if (typeof o === 'string') {
-			return {
-				error: {
-					code: 'invalid_request',
-					message: o
-				}
-			};
-		}
+videos: '', 
 
-		if (o && 'meta' in o && 'error_type' in o.meta) {
-			o.error = {
-				code: o.meta.error_type,
-				message: o.meta.error_message
-			};
-		}
+offline_access: '' 
 
-		return o;
-	}
+}, 
 
-	function formatFriends(o) {
-		paging(o);
-		if (o && 'data' in o) {
-			o.data.forEach(formatFriend);
-		}
+ 
 
-		return o;
-	}
+scope_delim: ',', 
 
-	function formatFriend(o) {
-		if (o.id) {
-			o.thumbnail = o.profile_picture;
-			o.name = o.full_name || o.username;
-		}
-	}
+ 
 
-	// See: http://instagram.com/developer/endpoints/
-	function paging(res) {
-		if ('pagination' in res) {
-			res.paging = {
-				next: res.pagination.next_url
-			};
-			delete res.pagination;
-		}
-	}
+// Instagram Basic Display API base URL 
 
-})(hello);
+base: 'https://graph.instagram.com/', 
+
+ 
+
+get: { 
+
+// Get user profile 
+
+me: 'me?fields=id,username,account_type,media_count', 
+
+ 
+
+// Get user's media 
+
+'me/photos': 'me/media?fields=id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username&limit=@{limit|25}', 
+
+ 
+
+// Note: Basic Display API doesn't support friends/followers endpoints 
+
+// These are kept for backwards compatibility but will not work 
+
+'me/friends': function() { 
+
+return false; 
+
+}, 
+
+'me/following': function() { 
+
+return false; 
+
+}, 
+
+'me/followers': function() { 
+
+return false; 
+
+} 
+
+}, 
+
+ 
+
+// Basic Display API is read-only, no POST/DELETE operations 
+
+// Removed post and del objects 
+
+ 
+
+wrap: { 
+
+me: function(o) { 
+
+ 
+
+formatError(o); 
+
+ 
+
+if (o && !o.error) { 
+
+// Basic Display API returns data directly, not wrapped in 'data' 
+
+o.id = o.id; 
+
+o.name = o.username; 
+
+// Basic Display API doesn't provide profile_picture in /me endpoint 
+
+// Would need separate call to get profile picture 
+
+o.thumbnail = null; 
+
+} 
+
+ 
+
+return o; 
+
+}, 
+
+ 
+
+'me/photos': function(o) { 
+
+ 
+
+formatError(o); 
+
+paging(o); 
+
+ 
+
+if ('data' in o) { 
+
+o.data = o.data.filter(function(d) { 
+
+// Filter for images and videos (carousel albums contain both) 
+
+return d.media_type === 'IMAGE' || d.media_type === 'VIDEO' || d.media_type === 'CAROUSEL_ALBUM'; 
+
+}); 
+
+ 
+
+o.data.forEach(function(d) { 
+
+// Map new API fields to old structure for compatibility 
+
+d.name = d.caption || null; 
+
+d.thumbnail = d.thumbnail_url || d.media_url; 
+
+d.picture = d.media_url; 
+
+d.source = d.media_url; 
+
+d.type = d.media_type.toLowerCase(); 
+
+d.created_time = d.timestamp; 
+
+}); 
+
+} 
+
+ 
+
+return o; 
+
+}, 
+
+ 
+
+'default': function(o) { 
+
+o = formatError(o); 
+
+paging(o); 
+
+return o; 
+
+} 
+
+}, 
+
+ 
+
+// Instagram Basic Display API supports CORS 
+
+xhr: false, 
+
+ 
+
+// No form 
+
+form: false 
+
+} 
+
+}); 
+
+ 
+
+function formatError(o) { 
+
+if (typeof o === 'string') { 
+
+return { 
+
+error: { 
+
+code: 'invalid_request', 
+
+message: o 
+
+} 
+
+}; 
+
+} 
+
+ 
+
+// Basic Display API error format 
+
+if (o && o.error) { 
+
+if (typeof o.error === 'object') { 
+
+// Error is already in correct format 
+
+return o; 
+
+} else { 
+
+// Convert error to standard format 
+
+o.error = { 
+
+code: o.error_type || 'request_failed', 
+
+message: o.error_message || o.error 
+
+}; 
+
+} 
+
+} 
+
+ 
+
+return o; 
+
+} 
+
+ 
+
+// Basic Display API uses cursor-based pagination 
+
+function paging(res) { 
+
+if (res && res.paging) { 
+
+// API already provides paging object with next/previous URLs 
+
+if (res.paging.next) { 
+
+// Extract just the path and query from the full URL 
+
+var next = res.paging.next; 
+
+// Keep the full URL as-is since it's an absolute URL from Graph API 
+
+res.paging = { 
+
+next: next 
+
+}; 
+
+} 
+
+} 
+
+} 
+
+ 
+
+})(hello); 

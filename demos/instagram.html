@@ -1,160 +1,219 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 
-<link rel="stylesheet" href="/adorn/adorn.css"/>
-<script src="/adorn/adorn.js" async></script>
+ 
 
-<script src="client_ids.js"></script>
-<script src="../src/hello.polyfill.js"></script>
-<script src="../src/hello.js"></script>
-<script src="../src/modules/instagram.js"></script>
+<link rel="stylesheet" href="/adorn/adorn.css"/> 
 
-<title>hello( instagram )</title>
-<h1>hello( instagram )</h1>
+<script src="/adorn/adorn.js" async></script> 
 
-<button id='profile' onclick="getPhotos()">Get instagram photos</button>
-<div id="result"></div>
-<button id="more" style="display:none;">Load more</button>
+ 
 
-<p>The button above executes <code>getPhotos()</code></p>
+<script src="client_ids.js"></script> 
 
-<script class="pre">
-function getPhotos(){
+<script src="../src/hello.polyfill.js"></script> 
 
-	// Define an instagram instance
-	var instagram = hello( 'instagram' );
+<script src="../src/hello.js"></script> 
 
-	// Trigger login to instagram
-	instagram.login().then( function(){
+<script src="../src/modules/instagram.js"></script> 
 
-		// Get Profile
-		instagram.api('me').then( profileHandler, errorHandler);
+ 
 
-		// Get user photos
-		instagram.api('me/photos').then( photosHandler, errorHandler );
+<title>hello( instagram )</title> 
 
-	},errorHandler);
-}
+<h1>hello( instagram )</h1> 
 
+ 
 
-function profileHandler( r ){
+<div class="notice" style="background: #fff3cd; padding: 15px; margin: 15px 0; border-left: 4px solid #ffc107;"> 
 
-	var profile = document.getElementById( 'profile' );
+<strong>⚠️ Instagram Basic Display API Notice:</strong> 
 
-	profile.innerHTML = "<img src='"+ r.thumbnail + "' width=24/>Connected to instagram as " + r.name;
+<p>Instagram has deprecated their old API. This demo now uses the Instagram Basic Display API which:</p> 
 
-}
+<ul> 
 
+<li>Only provides read-only access to user profile and media</li> 
 
-function photosHandler( r ){
+<li>Does not support likes, comments, or posting</li> 
 
-	for(var i=0;i<r.data.length;i++){
-		var pic = r.data[i];
-		var img = document.createElement('img');
-		img.title = pic.name;
-		img.src = pic.thumbnail;
-		document.getElementById( 'result' ).appendChild( img );
-	}
+<li>Does not provide access to friends/followers</li> 
 
-	var next = r.paging && r.paging.next;
+<li>Requires an app to be registered with Facebook</li> 
 
-	more.style.display = next ? 'block' : 'none';
-	more.onclick = function(){
+</ul> 
 
-		hello( 'instagram' ).api( next ).then( photosHandler, errorHandler );
+<p>Learn more: <a href="https://developers.facebook.com/docs/instagram-basic-display-api" target="_blank">Instagram Basic Display API Documentation</a></p> 
 
-	};
-}
+</div> 
 
-</script>
+ 
 
-<p>Set up your client id</p>
+<button id='profile' onclick="getPhotos()">Get instagram photos</button> 
 
-<script class="pre">
-hello.init({
-	instagram : INSTAGRAM_CLIENT_ID
-},{
-	scope : 'photos',
-	redirect_uri:'../redirect.html'
-});
-</script>
+<div id="result"></div> 
 
+<button id="more" style="display:none;">Load more</button> 
 
-<h2>Like</h2>
+ 
 
-<button onclick="getPopular()">Get popular photos</button>
+<p>The button above executes <code>getPhotos()</code></p> 
 
-<p>Once photos are loaded, click the photo to 'like'</p>
+ 
 
-<div id="popular"></div>
+<script class="pre"> 
 
-<style>
-.liked{
-	border:5px solid lime;
-}
-</style>
-<script class="pre">
-function getPopular(){
+function getPhotos(){ 
 
-	var instagram = hello('instagram');
+ 
 
-	instagram.login({scope:'publish'}).then(function(){
+// Define an instagram instance 
 
-		// Custom instagram endpoint
-		return instagram.api('media/popular');
-	})
-	.then(popularMediaHandler, errorHandler)
-}
+var instagram = hello( 'instagram' ); 
 
+ 
 
-function popularMediaHandler( r ){
+// Trigger login to instagram 
 
-	var popularContainer = document.getElementById( 'popular' );
+instagram.login().then( function(){ 
 
-	r.data.forEach(function(pic){
+ 
 
-		var img = document.createElement('img');
-		img.title = pic.caption.text;
-		img.src = pic.images.thumbnail.url;
-		img.className = ( pic.user_has_liked ? 'liked' : '' );
+// Get Profile 
 
-		img.onclick = likePic.bind( pic, img );
+instagram.api('me').then( profileHandler, errorHandler); 
 
-		popularContainer.appendChild( img );
+ 
 
-	});
+// Get user photos 
 
-}
+instagram.api('me/photos').then( photosHandler, errorHandler ); 
 
+ 
 
-function likePic(img){
+},errorHandler); 
 
-	var pic = this;
+} 
 
-	var method = !pic.user_has_liked ? 'post' : 'delete';
+ 
 
-	hello( 'instagram' ).api( 'me/like', method, {
-		id: pic.id
-	})
-	.then(function(r) {
-		if (r.meta.code === 200) {
-			pic.user_has_liked = method === 'post';
-			img.className = ( pic.user_has_liked ? 'liked' : '' );
-		}
-	}, console.error.bind(console));
-};
+ 
 
+function profileHandler( r ){ 
 
-</script>
+ 
 
+var profile = document.getElementById( 'profile' ); 
 
-<script>
+ 
 
-function errorHandler(e){
-	log("Failed making API request " + e.error.message );
-}
+// Basic Display API doesn't provide profile picture in /me endpoint 
 
-function log(str){
-	console.log(str);
-	document.getElementById('result').appendChild(document.createTextNode(str));
-}
-</script>
+profile.innerHTML = "Connected to Instagram as " + r.name + " (ID: " + r.id + ")"; 
+
+ 
+
+} 
+
+ 
+
+ 
+
+function photosHandler( r ){ 
+
+ 
+
+for(var i=0;i<r.data.length;i++){ 
+
+var pic = r.data[i]; 
+
+var img = document.createElement('img'); 
+
+img.title = pic.name || pic.id; 
+
+img.src = pic.thumbnail; 
+
+img.style.margin = '5px'; 
+
+img.style.maxWidth = '200px'; 
+
+document.getElementById( 'result' ).appendChild( img ); 
+
+} 
+
+ 
+
+var next = r.paging && r.paging.next; 
+
+ 
+
+more.style.display = next ? 'block' : 'none'; 
+
+more.onclick = function(){ 
+
+ 
+
+hello( 'instagram' ).api( next ).then( photosHandler, errorHandler ); 
+
+ 
+
+}; 
+
+} 
+
+ 
+
+</script> 
+
+ 
+
+<p>Set up your client id</p> 
+
+ 
+
+<script class="pre"> 
+
+hello.init({ 
+
+instagram : INSTAGRAM_CLIENT_ID 
+
+},{ 
+
+scope : 'user_profile,user_media', 
+
+redirect_uri:'../redirect.html' 
+
+}); 
+
+</script> 
+
+ 
+
+ 
+
+<script> 
+
+ 
+
+function errorHandler(e){ 
+
+log("Failed making API request: " + (e.error ? e.error.message : e) ); 
+
+} 
+
+ 
+
+function log(str){ 
+
+console.log(str); 
+
+var p = document.createElement('p'); 
+
+p.style.color = 'red'; 
+
+p.textContent = str; 
+
+document.getElementById('result').appendChild(p); 
+
+} 
+
+</script> 
