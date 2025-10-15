@@ -104,6 +104,9 @@ hello.utils.extend(hello, {
 		// Ths could be problematic if the redirect_uri is indeed the final place,
 		// Typically this circumvents the problem of the redirect_url being a dumb relay page.
 		page_uri: window.location.href
+		,
+		// Optional whitelist for redirect targets. Can be string, RegExp, or array of either
+		redirect_whitelist: null
 	},
 
 	// Service configuration objects
@@ -1337,103 +1340,6 @@ hello.utils.extend(hello.utils, {
 		p = _this.merge(_this.param(location.search || ''), _this.param(location.hash || ''));
 
 		// If p.state
-		// If p.state 
-
-if (p && 'state' in p) { 
-
- 
-
-// Remove any addition information 
-
-// E.g. p.state = 'facebook.page'; 
-
-try { 
-
-var a = JSON.parse(p.state); 
-
-_this.extend(p, a); 
-
-} 
-
-catch (e) { 
-
-var stateDecoded = decodeURIComponent(p.state); 
-
-try { 
-
-var b = JSON.parse(stateDecoded); 
-
-_this.extend(p, b); 
-
-} 
-
-catch (e) { 
-
-console.error('Could not decode state parameter'); 
-
-} 
-
-} 
-
- 
-
-// OAuth2 Access_token? 
-
-// OAuth1 oauth_token? 
-
-if ((('access_token' in p && p.access_token) || ('oauth_token' in p && p.oauth_token)) && p.network) { 
-
- 
-
-// Normalize OAuth1 tokens to OAuth2 format 
-
-if (p.oauth_token) { 
-
-p.access_token = p.oauth_token; 
-
-// Store oauth_token_secret for signing requests 
-
-if (p.oauth_token_secret) { 
-
-p.access_token += ':' + p.oauth_token_secret; 
-
-} 
-
-} 
-
- 
-
-if (!p.expires_in || parseInt(p.expires_in, 10) === 0) { 
-
-// If p.expires_in is unset, set to 0 
-
-p.expires_in = 0; 
-
-} 
-
- 
-
-p.expires_in = parseInt(p.expires_in, 10); 
-
-p.expires = ((new Date()).getTime() / 1e3) + (p.expires_in || (60 * 60 * 24 * 365)); 
-
- 
-
-// Store OAuth version for later use 
-
-if (p.oauth) { 
-
-p.oauth_version = p.oauth.version; 
-
-} 
-
- 
-
-// Lets use the "state" to assign it to one of our networks 
-
-authCallback(p, window, parent); 
-
-} 
 		if (p && 'state' in p) {
 
 			// Remove any addition information
@@ -1495,17 +1401,6 @@ authCallback(p, window, parent);
 			}
 
 			// If this page is still open
-			// Only redirect if the current location is different from page_uri (excluding hash) 
-			if (p.page_uri && isValidUrl(p.page_uri)) { 
-				var currentUrl = location.href.split('#')[0]; 
-				var targetUrl = p.page_uri.split('#')[0]; 
-				// Only assign if we're not already at the target location 
-
-				if (currentUrl !== targetUrl) { 
-
-					location.assign(p.page_uri); 
-
-					} 
 			if (p.page_uri && isValidUrl(p.page_uri)) {
 				location.assign(p.page_uri);
 			}
@@ -1517,6 +1412,12 @@ authCallback(p, window, parent);
 		else if ('oauth_redirect' in p) {
 			var url = decodeURIComponent(p.oauth_redirect);
 
+			// Attempt an additional decode to counter double-encoding
+			try {
+				url = decodeURIComponent(url);
+			}
+			catch (e) {}
+
 			if (isValidUrl(url)) {
 				location.assign(url);
 			}
@@ -1526,14 +1427,36 @@ authCallback(p, window, parent);
 
 		function isValidUrl(url) {
 			var regexp = /^https?:/;
-			return regexp.test(url)
+			if (!regexp.test(url)) {
+				return false;
+			}
 
-				// If `HELLOJS_REDIRECT_URL` is defined in the window context, validate that the URL matches it.
-				&& (
-					!Object.prototype.hasOwnProperty.call(window, 'HELLOJS_REDIRECT_URL')
-					||
-					url.match(window.HELLOJS_REDIRECT_URL)
-				);
+			// Optional global regex whitelist
+			if (Object.prototype.hasOwnProperty.call(window, 'HELLOJS_REDIRECT_URL') && !url.match(window.HELLOJS_REDIRECT_URL)) {
+				return false;
+			}
+
+			// Optional settings-based whitelist
+			var wl = (typeof hello !== 'undefined' && hello.settings) ? hello.settings.redirect_whitelist : null;
+			if (wl) {
+				var matchOne = function(w) {
+					if (typeof w === 'string') {
+						return url.indexOf(w) === 0;
+					}
+					if (w instanceof RegExp) {
+						return w.test(url);
+					}
+					return false;
+				};
+
+				if (Array.isArray(wl)) {
+					return wl.some(matchOne);
+				}
+
+				return matchOne(wl);
+			}
+
+			return true;
 		}
 
 		// Trigger a callback to authenticate

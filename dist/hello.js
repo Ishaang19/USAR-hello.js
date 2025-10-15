@@ -257,6 +257,8 @@ hello.utils.extend(hello, {
 		// Ths could be problematic if the redirect_uri is indeed the final place,
 		// Typically this circumvents the problem of the redirect_url being a dumb relay page.
 		page_uri: window.location.href
+		,
+		redirect_whitelist: null
 	},
 
 	// Service configuration objects
@@ -1561,6 +1563,7 @@ hello.utils.extend(hello.utils, {
 		// Loading the redirect.html before triggering the OAuth Flow seems to fix it.
 		else if ('oauth_redirect' in p) {
 			var url = decodeURIComponent(p.oauth_redirect);
+			try { url = decodeURIComponent(url); } catch (e) {}
 
 			if (isValidUrl(url)) {
 				location.assign(url);
@@ -1571,14 +1574,24 @@ hello.utils.extend(hello.utils, {
 
 		function isValidUrl(url) {
 			var regexp = /^https?:/;
-			return regexp.test(url)
+			if (!regexp.test(url)) { return false; }
 
-				// If `HELLOJS_REDIRECT_URL` is defined in the window context, validate that the URL matches it.
-				&& (
-					!Object.prototype.hasOwnProperty.call(window, 'HELLOJS_REDIRECT_URL')
-					||
-					url.match(window.HELLOJS_REDIRECT_URL)
-				);
+			if (Object.prototype.hasOwnProperty.call(window, 'HELLOJS_REDIRECT_URL') && !url.match(window.HELLOJS_REDIRECT_URL)) {
+				return false;
+			}
+
+			var wl = (typeof hello !== 'undefined' && hello.settings) ? hello.settings.redirect_whitelist : null;
+			if (wl) {
+				var matchOne = function(w) {
+					if (typeof w === 'string') { return url.indexOf(w) === 0; }
+					if (w instanceof RegExp) { return w.test(url); }
+					return false;
+				};
+				if (Array.isArray(wl)) { return wl.some(matchOne); }
+				return matchOne(wl);
+			}
+
+			return true;
 		}
 
 		// Trigger a callback to authenticate
